@@ -7,6 +7,10 @@ library(truncdist)
 library(tidyr)
 library(ggplot2)
 
+# Source the data and codes
+load("Data/result_sz.rda")
+source("Code/Model.R")
+
 # --------------- Functions ----------------
 
 pred <- function(para, dat_tol, d, N){
@@ -88,22 +92,18 @@ scientific_10 <- function(x) {
   parse(text=gsub("e", " %*% 10^", scales::scientific_format()(x)))
 }
 
-
-# ------------------- Simulation ----------------------
-# start at 1.19
-load("Data/result_sz.rda")
-source("Code/Model.R")
-
-(dat_tol <- train_result$dat)
-para <- train_result$result$para
-
 f_alp <- function(k, alp){
   alp[4] * (alp[3] / (1 + exp(2 * log(99) / alp[2] * (k - alp[1] - alp[2] / 2))) + 1 - alp[3])
 }
 
+# ------------------- Simulation ----------------------
+# start at 1.19
+(dat_tol <- train_result$dat)
+para <- para0 <- train_result$result$para
+
 dat1 <- load_nCov2019()
 dat_city <- dat1$data
-dat_city_sz <- dat_city[dat_city$city == "Shenzhen", ]
+dat_city_sz <- dat_city[dat_city$city == "深圳", ]
 dat_city_sz <- na.omit(dat_city_sz)
 
 ind = 42
@@ -115,14 +115,24 @@ para_mean <- train_result$result$para_mean
 pre_arr <- pred(para0, dat_tol = train_result$dat, 100, N = train_result$N)
 result2 <- my_fun(pre_arr, ind)
 result_output <- result2$All_Quan[, ]
+lines(1:ind, result2$All_Quan[2, ][1:ind])
 
 # Plot
 plot(1:ind, dat_city_sz[1:ind, "cum_confirm"], ylim = c(0, 3000))
 lines(1:ind, result2$All_Quan[2, ][1:ind])
 
 d = 100
+result_all <- result_output
 for (d_late in 1:5) {
+# for (d_late in c(1:5, 12)) {
   pre_arr <- pred(change_d(para0, d_late), dat_tol = train_result$dat, 100, N = 13020000)
   result2 <- my_fun(pre_arr, ind)
+  result_all <- rbind(result_all, result2$All_Quan)
   lines(1:ind, result2$All_Quan[2, 1:ind], col = d_late)
 }
+
+# time_lab <- format(seq.Date(from = as.Date("2020-01-19"), by = "day", length.out = 42), format = "%m/%d")
+# result_all_csv = cbind(rep(c(0:5, 12), each = 3), result_output)
+# result_all_csv = rbind(0:42, result_all_csv)
+# result_all_csv = rbind(c("", time_lab), result_all_csv)
+# write.csv(result_all_csv, file = "result_all.csv")
